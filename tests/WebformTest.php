@@ -1,4 +1,5 @@
 <?php
+require_once('Automation.php');
 /**
  * Created by PhpStorm.
  * User: jfranks
@@ -12,18 +13,20 @@ class WebformTest extends PHPUnit_Framework_TestCase {
    * @var \RemoteWebDriver
    */
   protected $webDriver;
+  protected $url;
 
   public function setUp()
   {
-    $capabilities = array(\WebDriverCapabilityType::BROWSER_NAME => 'firefox');
+    $capabilities = array(\WebDriverCapabilityType::BROWSER_NAME => 'chrome');
     $this->webDriver = RemoteWebDriver::create('http://localhost:4444/wd/hub', $capabilities);
     $dev_url = 'http://fvdmug-automation.local:8083/';
-    $this->webDriver->get($dev_url);
+    $this->url = $dev_url;
+    $this->webDriver->get($this->url);
   }
 
   public function tearDown()
   {
-    //$this->webDriver->close();
+    $this->webDriver->close();
   }
 
   public function testIsAnon() {
@@ -34,13 +37,13 @@ class WebformTest extends PHPUnit_Framework_TestCase {
   }
 
   public function testAnonSimpleFormHasQuestions() {
-    $this->goToForm();
+    $this->goToForm('Simple Anonymous');
 
     $this->formElementsExist();
   }
 
   public function testAnonSubmit() {
-    $this->goToForm();
+    $this->goToForm('Simple Anonymous');
 
     $now = time();
     $ids_values = array(
@@ -71,6 +74,40 @@ class WebformTest extends PHPUnit_Framework_TestCase {
 
   }
 
+  function testDefaultValuesAnon() {
+    $this->goToForm('Default Value Fields');
+    $txt1 = $this->webDriver->findElement(WebDriverBy::id('edit-submitted-not-required'));
+    $this->assertEquals('' ,$txt1->getText(), 'Should start empty');
+
+    $txt2 = $this->webDriver->findElement(WebDriverBy::id('edit-submitted-default-value'));
+    $this->assertEquals('Default', $txt2->getAttribute('value'), 'Should start Default');
+
+    $txt3 = $this->webDriver->findElement(WebDriverBy::id('edit-submitted-default-your-name'));
+    $this->assertEquals('', $txt3->getText(), 'Anon user should not have a name filled in');
+  }
+
+  function testDefaultValuesAuth() {
+    $uname = Automation::registerNewUser($this->webDriver);
+
+    $this->goToForm('Default Value Fields');
+    $txt1 = $this->webDriver->findElement(WebDriverBy::id('edit-submitted-not-required'));
+    $this->assertEquals('' ,$txt1->getText(), 'Should start empty');
+
+    $txt2 = $this->webDriver->findElement(WebDriverBy::id('edit-submitted-default-value'));
+    $this->assertEquals('Default', $txt2->getAttribute('value'), 'Should start Default');
+
+    $txt3 = $this->webDriver->findElement(WebDriverBy::id('edit-submitted-default-your-name'));
+    $this->assertEquals($uname, $txt3->getAttribute('value'), 'Auth user should have a name filled in');
+  }
+
+  function testDefaultValuesFields() {
+    $this->goToForm('Default Value Fields');
+    $form = $this->webDriver->findElement(WebDriverBy::cssSelector('.webform-client-form'));
+    $fields = $form->findElements(WebDriverBy::tagName('input'));
+    $input_count_modifier = 7; // There are 6 hidden fields plus the submit button
+    $this->assertEquals(3 + $input_count_modifier, count($fields), 'Should have 3 fields');
+  }
+
   /**
    * @param $expected_id
    */
@@ -80,9 +117,10 @@ class WebformTest extends PHPUnit_Framework_TestCase {
     $this->assertEquals(1, count($matches), 'Should have one ' . $expected_id);
   }
 
-  public function goToForm()
+  public function goToForm($link_text)
   {
-    $link = $this->webDriver->findElement(WebDriverBy::linkText('Simple Anonymous'));
+    $this->webDriver->get($this->url); // Go Home first
+    $link = $this->webDriver->findElement(WebDriverBy::linkText($link_text));
     $link->click();
   }
 
@@ -97,7 +135,12 @@ class WebformTest extends PHPUnit_Framework_TestCase {
       $this->assertOneOf($expected_id);
     }
 
+    $muppet_radios = $this->webDriver->findElements(WebDriverBy::name('submitted[favorite_muppet]'));
+    $actual_muppet_count = count($muppet_radios);
     $expected_muppet_count = 7;
+
+    $this->assertEquals($expected_muppet_count, $actual_muppet_count);
+
     // This array starts at 1, not 0.
     for ($i = 1; $i <= $expected_muppet_count; $i++) {
       $muppet_id = "edit-submitted-favorite-muppet-$i";

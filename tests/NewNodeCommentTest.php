@@ -1,5 +1,5 @@
 <?php
-
+require_once('automation.php');
 /**
  * Created by PhpStorm.
  * User: jfranks
@@ -16,7 +16,7 @@ class NewNodeCommentTest extends PHPUnit_Framework_TestCase
 
   public function setUp()
   {
-    $capabilities = array(\WebDriverCapabilityType::BROWSER_NAME => 'firefox');
+    $capabilities = array(\WebDriverCapabilityType::BROWSER_NAME => 'chrome');
     $this->webDriver = RemoteWebDriver::create('http://localhost:4444/wd/hub', $capabilities);
     $dev_url = 'http://fvdmug-automation.local:8083/';
     $this->webDriver->get($dev_url);
@@ -24,12 +24,12 @@ class NewNodeCommentTest extends PHPUnit_Framework_TestCase
 
   public function tearDown()
   {
-    //$this->webDriver->close();
+    $this->webDriver->close();
   }
 
-  public function t1estRegisterNewUserFormElements()
+  public function testRegisterNewUserFormElements()
   {
-    $this->clickRegisterLink();
+    Automation::clickRegisterLink($this->webDriver);
 
     $expected_elements = array(
         'edit-name',
@@ -55,20 +55,22 @@ class NewNodeCommentTest extends PHPUnit_Framework_TestCase
 
   public function testRegisterNewUser()
   {
-    $now = time();
-    $this->clickRegisterLink();
-    $elements_values = array(
-        'edit-name' => $now,
-        'edit-mail' => "$now@example.com",
-        'edit-pass-pass1' => 'password',
-        'edit-pass-pass2'=> 'password',
-    );
-    foreach ($elements_values as $key => $value) {
-      $element = $this->webDriver->findElement(WebDriverBy::id($key));
-      $element->clear()->sendKeys($value);
-    }
-    $submit = $this->webDriver->findElement(WebDriverBy::id('edit-submit'));
-    $submit->click();
+//    $now = time();
+//    $this->clickRegisterLink();
+//    $elements_values = array(
+//        'edit-name' => $now,
+//        'edit-mail' => "$now@example.com",
+//        'edit-pass-pass1' => 'password',
+//        'edit-pass-pass2'=> 'password',
+//    );
+//    foreach ($elements_values as $key => $value) {
+//      $element = $this->webDriver->findElement(WebDriverBy::id($key));
+//      $element->clear()->sendKeys($value);
+//    }
+//    $submit = $this->webDriver->findElement(WebDriverBy::id('edit-submit'));
+//    $submit->click();
+
+    $now = Automation::registerNewUser($this->webDriver);
 
     $messages = $this->webDriver->findElement(WebDriverBy::cssSelector('.messages'));
     $expected_text = 'Registration successful. You are now logged in.';
@@ -76,10 +78,5 @@ class NewNodeCommentTest extends PHPUnit_Framework_TestCase
     $this->assertContains($expected_text, $actual_text, 'Registration message');
   }
 
-  public function clickRegisterLink()
-  {
-    $register_link = $this->webDriver->findElement(WebDriverBy::linkText('Create new account'));
-    $register_link->click();
-  }
 }
  
